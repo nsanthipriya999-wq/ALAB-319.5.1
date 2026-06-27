@@ -1,22 +1,22 @@
 import express from "express";
-import db from "../db/conn.js";
-import { ObjectId } from "mongodb";
+import mongoose from 'mongoose';
 import Grade from "../models/gradeModel.js"
 const router = express.Router();
+
 
 // -------------------------Create a single grade entry-------------------------------------------
 router.post("/", async (req, res) => {
   try{
 
-    console.log(req.body);
+  console.log(req.body);
   const grade=new Grade(req.body);
  
   await grade.save();
-  res.status(201).json(grade);
+  return res.status(201).json(grade);
 
   }catch(err){
 
-    res.status(400).json({error:err.message});
+    return res.status(400).json({error:err.message});
   }
 
 
@@ -26,14 +26,13 @@ router.post("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
 
   const grade=await Grade.findById(req.params.id);
-  if(grade){
-
-  
-  res.status(200).json(grade);
+  if(grade)
+    {
+     return res.status(200).json(grade);
   }
   else
-    res.status(404).json({message:'Grade not found'});
-    
+    return res.status(404).json({message:'Grade not found'});
+
 });
 
 // ----------------------------Add a score to a grade entry-----------------------------------------------
@@ -53,7 +52,7 @@ router.patch("/:id/add", async (req, res) => {
     
   );
   if(grade){
-    res.status(200).json(grade);
+   return  res.status(200).json(grade);
   }
   else{
     return res.status(404).json({message:'Grade not found'});
@@ -67,17 +66,16 @@ router.patch("/:id/remove", async (req, res) => {
     req.params.id,
     {
       $pull:{
-        scores:req.body
-      }
-    },
+        scores:{_id:req.body._id}
+    }},
     {
-      //new:true
-      returnDocument: 'after' 
+    
+      new:true,
     }
     
   );
  if(grade){
-    res.status(200).json(grade);
+   return res.status(200).json(grade);
   }
   else{
     return res.status(404).json({message:'Grade not found'});
@@ -89,7 +87,7 @@ router.patch("/:id/remove", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   const grade=await Grade.findByIdAndDelete(req.params.id);
   if(grade){
-    res.status(200).json({message:"Grade deleted",grade});
+    return res.status(200).json({message:"Grade deleted",grade});
   }
   else{
     return res.status(404).json({message:'Grade not found'});
@@ -105,7 +103,7 @@ router.get("/student/:id",  (req, res) => {
   res.redirect(`/grades/learner/${req.params.id}`);
 });
 
-// Get a learner's grade data
+// ---------Get a learner's grade data---------
 router.get("/learner/:id", async (req, res) => {
   
  const query={student_id:Number(req.params.id)};
@@ -113,9 +111,9 @@ router.get("/learner/:id", async (req, res) => {
  const result=await Grade.find(query).limit(10);
  console.log(result);
  if (result.length===0){
-  return res.status(404).json("no data exists with that id");
+  return res.status(404).json({message:"no data exists with that id"});
  }
- res.status(200).json(result);
+ else return res.status(200).json(result);
  
 });
 
@@ -127,17 +125,17 @@ router.delete("/learner/:id", async (req, res) => {
  console.log(result);
 
 if(result.deletedCount!==0){
-  res.status(200).json(result);
+  return res.status(200).json(result);
 }
 else
 {
-  res.status(404).json({message:"no grades found"});
+  return res.status(404).json({message:"no grades found to delete"});
 }
   });
   
 //------------------------- Get a class's grade data------------------------------
 router.get("/class/:id", async (req, res) => {
-  const query={ class_id:Number(req.params.id),};
+  const query={ class_id:Number(req.params.id)};
   
   if(req.query.student){
     query.student_id=Number(req.query.student);
@@ -151,14 +149,14 @@ router.get("/class/:id", async (req, res) => {
   }
  
 
-  res.status(200).json(result);
+  else return res.status(200).json(result);
  
 });
 
 // ------------------------------Update a class id------------------------------
 router.patch("/class/:id", async (req, res) => {
   const query={
-    class_id:Number(req.params.id),
+    class_id:Number(req.params.id)
   };
   
 
@@ -171,19 +169,19 @@ router.patch("/class/:id", async (req, res) => {
        }
     );
 
-  if (!result) res.send("Not found").status(404);
-  else res.send(result).status(200);
+  if (result.matchedCount===0) return res.status(404).json({message:"no record found"});
+  else return res.status(200).json(result);
 });
 
 // --------------------------Delete a class-----------------------------------
 router.delete("/class/:id", async (req, res) => {
 
-  let query = { class_id: Number(req.params.id) };
+  const  query = { class_id: Number(req.params.id) };
 
   const result = await Grade.deleteMany(query);
 
-  if (!result) res.send("Not found").status(404);
-  else res.send(result).status(200);
+  if (result.deletedCount===0) return res.status(404).json({message:"no record found for the given class id"});
+  else return res.status(200).json(result);
 });
 
 export default router;
